@@ -25,11 +25,14 @@ class GaussianBlur3D(nn.Module):
         not. False by default
     """
 
-    def __init__(self, initial_sigma, max_kernel_size=11, grads=False):
+    def __init__(self, initial_sigma, max_kernel_size=11, device="cpu", grads=False):
         super(GaussianBlur3D, self).__init__()
         self.sigma = nn.Parameter(torch.tensor([initial_sigma], dtype=torch.float32))
         self.max_kernel_size = 2 * int(max_kernel_size // 2) + 1
-        self.kernel = self.create_gaussian_kernel(self.max_kernel_size, self.sigma)
+        self.device = device
+        self.kernel = self.create_gaussian_kernel(
+            self.max_kernel_size, self.sigma, self.device
+        )
         if not grads:
             self.sigma.requires_grad = False
 
@@ -51,7 +54,7 @@ class GaussianBlur3D(nn.Module):
         y = range.view(1, -1, 1).repeat(kernel_size, 1, kernel_size).to(device)
         z = range.view(1, 1, -1).repeat(kernel_size, kernel_size, 1).to(device)
 
-        gaussian_kernel = torch.exp(-(x**2 + y**2 + z**2) / (2 * sigma**2))
+        gaussian_kernel = torch.exp(-(x**2 + y**2 + z**2) / (2 * sigma.to(device) ** 2))
         gaussian_kernel = gaussian_kernel / torch.sum(gaussian_kernel)
         return gaussian_kernel.view(1, 1, kernel_size, kernel_size, kernel_size)
 
@@ -102,11 +105,15 @@ class GaussianBlur2D(nn.Module):
         not. False by default
     """
 
-    def __init__(self, initial_sigma, max_kernel_size=11, grads=False):
+    def __init__(self, initial_sigma, max_kernel_size=11, device="cpu", grads=False):
         super(GaussianBlur2D, self).__init__()
         self.sigma = nn.Parameter(torch.tensor([initial_sigma], dtype=torch.float32))
         self.max_kernel_size = max_kernel_size
-        self.kernel = self.create_gaussian_kernel(self.max_kernel_size, self.sigma)
+        self.device = device
+
+        self.kernel = self.create_gaussian_kernel(
+            self.max_kernel_size, self.sigma, self.device
+        )
         if not grads:
             self.sigma.requires_grad = False
 
@@ -129,7 +136,7 @@ class GaussianBlur2D(nn.Module):
         x = range.view(-1, 1).repeat(1, kernel_size).to(device)
         y = range.view(1, -1).repeat(kernel_size, 1).to(device)
 
-        gaussian_kernel = torch.exp(-(x**2 + y**2) / (2 * sigma**2))
+        gaussian_kernel = torch.exp(-(x**2 + y**2) / (2 * sigma.to(device) ** 2))
         gaussian_kernel = gaussian_kernel / torch.sum(gaussian_kernel)
 
         return gaussian_kernel.view(1, 1, kernel_size, kernel_size)
